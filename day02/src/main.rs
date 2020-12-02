@@ -25,7 +25,6 @@ fn main() {
                 char_count += 1;
             }
         }
-        // dbg!(count);
 
         if char_count >= min && char_count <= max {
             answer_part_1 += 1;
