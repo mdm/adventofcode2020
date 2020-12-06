@@ -6,7 +6,7 @@ fn main() {
     let file = std::fs::File::open(filename).unwrap();
     let reader = std::io::BufReader::new(file);
 
-    let all_chars: Vec<_> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
+    let all_chars: HashSet<_> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
 
     let mut groups_one = Vec::new();
     let mut groups_all = Vec::new();
@@ -25,11 +25,9 @@ fn main() {
             continue;
         }
 
-        for character in line.chars() {
-            group_one.insert(character);
-        }
-
-        group_all = group_all.into_iter().filter(|character| line.contains(*character)).collect();
+        let group = line.chars().collect();
+        group_one = group_one.union(&group).copied().collect();
+        group_all = group_all.intersection(&group).copied().collect();
     }
     groups_one.push(group_one);
     groups_all.push(group_all);
