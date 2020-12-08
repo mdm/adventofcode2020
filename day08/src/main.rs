@@ -70,7 +70,7 @@ fn main() {
 
     println!("{}", run(&program).1);
 
-    for i in 00..program.len() {
+    for i in 0..program.len() {
         match program[i].operation {
             Operation::Acc => {}
             Operation::Jmp => {
