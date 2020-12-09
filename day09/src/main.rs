@@ -17,7 +17,7 @@ fn is_valid(numbers: &Vec<u64>, index: usize, preamble_size: usize) -> bool {
 }
 
 fn find_encryption_weakness(numbers: &Vec<u64>, invalid_number: u64) -> u64 {
-    for start in 0..numbers.len() {
+    for start in 0..(numbers.len() - 1) {
         for end in (start + 1)..numbers.len() {
             let sum: u64 = numbers.iter().skip(start).take(end - start).sum();
             if sum == invalid_number {
