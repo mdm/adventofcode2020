@@ -1,0 +1,24 @@
+(0), 1, 4, 5, 6, 7, 10, 11, 12, 15, 16, 19, (22)
+
+1
+4
+5
+6
+7
+10
+11
+12
+15
+16
+19
+
+22 1
+19 1
+16 1
+15 1
+12 1
+11 1
+10 2
+7 1*2
+
+# of ways to connect x = sum over adapters y to connect to summing # of ways to connect y
