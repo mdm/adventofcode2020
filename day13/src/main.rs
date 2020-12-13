@@ -1,6 +1,6 @@
 use std::io::BufRead;
-type BusId = i64;
 
+type BusId = i64;
 
 #[derive(Debug,PartialEq)]
 enum Bus {
