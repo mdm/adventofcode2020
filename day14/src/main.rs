@@ -24,7 +24,7 @@ fn main() {
             part1_memory.insert(destination, (value | part1_bitmask_set) & !part1_bitmask_clear & 0xf_ffff_ffff);
 
             for i in 0..(2 as u64).pow(part2_popcount_floating) {
-                let mut real_destination = 0; //destination | part1_bitmask_set;
+                let mut real_destination = 0;
                 let mut popcount_position = 0;
                 for bit in 0..36 {
                     if (part2_bitmask_floating & (1 << bit)) > 0 {
