@@ -62,7 +62,6 @@ fn find_all_neighbors(tiles: &HashMap<u64, Vec<Vec<char>>>) -> HashMap<u64, Vec<
             for i in 0..4 {
                 for j in 0..8 {
                     if edges_match(tile_a, &all_edges[i], tile_b, &all_edges[j]) {
-                        // tile_a_neighbors.insert(*id_b);
                         tile_a_neighbors.push(*id_b);
                     }
                 }
@@ -80,11 +79,12 @@ fn display(tile: &Vec<Vec<char>>) {
     println!("{}\n", output);
 }
 
-fn flip(tile: &Vec<Vec<char>>, num_flips: u32) -> Vec<Vec<char>> {
-    if num_flips % 2 == 1 {
-        tile.iter().rev().cloned().collect()
-    } else {
-        tile.clone()
+fn flip(tile: &Vec<Vec<char>>, flip_type: u32) -> Vec<Vec<char>> {
+    match flip_type {
+        0 => tile.clone(),
+        1 => tile.iter().map(|row| row.iter().rev().copied().collect()).collect(),
+        2 => tile.iter().rev().cloned().collect(),
+        _ => unreachable!(),
     }
 }
 
@@ -102,13 +102,12 @@ fn rotate(tile: &Vec<Vec<char>>, num_rotates: u32) -> Vec<Vec<char>> {
     result
 }
 
-fn match_tile(tiles: &HashMap<u64, Vec<Vec<char>>>, tile_id: u64, neighbors: &Vec<u64>, new_row: bool) -> (u64, Vec<Vec<char>>) {
-    let tile = &tiles[&tile_id];
+fn match_tile(tiles: &HashMap<u64, Vec<Vec<char>>>, tile: &Vec<Vec<char>>, neighbors: &Vec<u64>, new_row: bool) -> (u64, Vec<Vec<char>>) {
     for neighbor_id in neighbors {
         let original_neighbor = &tiles[neighbor_id];
-        for num_flips in 0..2 {
+        for flip_type in 0..3 {
             for num_rotates in 0..4 {
-                let neighbor = flip(&rotate(original_neighbor, num_rotates), num_flips);
+                let neighbor = flip(&rotate(original_neighbor, num_rotates), flip_type);
                 if new_row {
                     if edges_match(tile, &Edge::LowerCCW, &neighbor, &Edge::UpperCW) {
                         return (*neighbor_id, neighbor);
@@ -122,8 +121,43 @@ fn match_tile(tiles: &HashMap<u64, Vec<Vec<char>>>, tile_id: u64, neighbors: &Ve
         }
     }
 
-    dbg!(tile_id, neighbors);
-    (0, Vec::new())
+    unreachable!()
+}
+
+fn crop_tiles(image: &Vec<Vec<Vec<Vec<char>>>>) -> Vec<Vec<Vec<Vec<char>>>> {
+    image.iter().map(|image_row| {
+        image_row.iter().map(|tile| {
+            tile.iter().skip(1).take(tile.len() - 2).map(|tile_row| {
+                tile_row.iter().skip(1).take(tile_row.len() - 2).copied().collect()
+            }).collect()
+        }).collect()
+    }).collect()
+}
+
+fn stitch_tiles(image: &Vec<Vec<Vec<Vec<char>>>>) -> Vec<Vec<char>> {
+    image.iter().fold(Vec::new(), |mut stitched, image_row| {
+        let rows = image_row.iter().fold(Vec::new(), |mut stitched, tile| {
+            if stitched.len() == 0 {
+                for _ in 0..tile.len() {
+                    stitched.push(Vec::new());
+                }
+            }
+
+            for (i, tile_row) in tile.iter().enumerate() {
+                for character in tile_row.iter() {
+                    stitched[i].push(*character);
+                }
+            }
+
+            stitched
+        });
+
+        for row in rows {
+            stitched.push(row);
+        }
+
+        stitched
+    })    
 }
 
 fn assemble_image(tiles: &HashMap<u64, Vec<Vec<char>>>, all_neighbors: &HashMap<u64, Vec<u64>>) -> Vec<Vec<char>> {
@@ -139,9 +173,6 @@ fn assemble_image(tiles: &HashMap<u64, Vec<Vec<char>>>, all_neighbors: &HashMap<
         neighbors.len() == 2
     }).nth(0).unwrap();
 
-    // display(&tiles[first_tile_neighbors.0]);
-    // display(&rotate(&tiles[first_tile_neighbors.0], 1));
-
     for num_rotates in 0..4 {
         let first_tile = rotate(&tiles[first_tile_neighbors.0], num_rotates);
         let has_right_neighbor = all_edges.iter().any(|edge| {
@@ -156,7 +187,6 @@ fn assemble_image(tiles: &HashMap<u64, Vec<Vec<char>>>, all_neighbors: &HashMap<
         });
         
         if has_right_neighbor && has_lower_neighbor {
-            dbg!(first_tile_neighbors.0, num_rotates);
             image[0].push(first_tile);
             atlas[0].push(*first_tile_neighbors.0);
             break;
@@ -172,7 +202,7 @@ fn assemble_image(tiles: &HashMap<u64, Vec<Vec<char>>>, all_neighbors: &HashMap<
             if x == 0 {
                 // attach to tile above
                 let tile_id = atlas[y - 1][x];
-                let matching_tile = match_tile(tiles, tile_id, &all_neighbors[&tile_id], true);
+                let matching_tile = match_tile(tiles, &image[y - 1][x], &all_neighbors[&tile_id], true);
 
                 image.push(Vec::new());
                 image[y].push(matching_tile.1);
@@ -181,8 +211,7 @@ fn assemble_image(tiles: &HashMap<u64, Vec<Vec<char>>>, all_neighbors: &HashMap<
             } else {
                 // attach to tile to the left
                 let tile_id = atlas[y][x - 1];
-                // dbg!(tile_id, y, x - 1, &all_neighbors);
-                let matching_tile = match_tile(tiles, tile_id, &all_neighbors[&tile_id], false);
+                let matching_tile = match_tile(tiles, &image[y][x - 1], &all_neighbors[&tile_id], false);
 
                 image[y].push(matching_tile.1);
                 atlas[y].push(matching_tile.0);            
@@ -190,9 +219,48 @@ fn assemble_image(tiles: &HashMap<u64, Vec<Vec<char>>>, all_neighbors: &HashMap<
         }
     }
 
-    dbg!(&atlas);
+    let cropped = crop_tiles(&image);
+    let stitched = stitch_tiles(&cropped);
 
-    Vec::new()
+    stitched
+}
+
+fn find_sea_monsters(image: Vec<Vec<char>>) -> u64 {
+    let mut sea_monster = Vec::new();
+    sea_monster.push("                  # ".chars().collect::<Vec<_>>());
+    sea_monster.push("#    ##    ##    ###".chars().collect::<Vec<_>>());
+    sea_monster.push(" #  #  #  #  #  #   ".chars().collect::<Vec<_>>());
+    let sea_monster_size = sea_monster.iter().map(|row| {
+        row.iter().filter(|character| **character == '#').count() as u64
+    }).sum::<u64>();
+
+    let mut count = 0;
+    for image_y in 0..(image.len() - sea_monster.len()) {
+        for image_x in 0..(image[0].len() - sea_monster[0].len()) {
+            let mut found = true;
+            for sea_monster_y in 0..sea_monster.len() {
+                for sea_monster_x in 0..sea_monster[0].len() {
+                    let x = image_x + sea_monster_x;
+                    let y = image_y + sea_monster_y;
+
+                    if sea_monster[sea_monster_y][sea_monster_x] == '#' && image[y][x] != '#' {
+                        found = false;
+                        break;
+                    }
+                }
+
+                if !found {
+                    break;
+                }
+            }
+
+            if found {
+                count += sea_monster_size;
+            }
+        }
+    }
+
+    count
 }
 
 fn main() {
@@ -229,17 +297,6 @@ fn main() {
     }
     tiles.insert(current_tile_id, current_tile);
 
-    dbg!(tiles.len());
-
-    // let current_tile = tiles.get(&2311).unwrap();
-    // dbg!(get_edge(current_tile, &Edge::UpperCW), &Edge::UpperCW);
-    // dbg!(get_edge(current_tile, &Edge::UpperCCW), &Edge::UpperCCW);
-    // dbg!(get_edge(current_tile, &Edge::RightCW), &Edge::RightCW);
-    // dbg!(get_edge(current_tile, &Edge::RightCCW), &Edge::RightCCW);
-    // dbg!(get_edge(current_tile, &Edge::LowerCW), &Edge::LowerCW);
-    // dbg!(get_edge(current_tile, &Edge::LowerCCW), &Edge::LowerCCW);
-    // dbg!(get_edge(current_tile, &Edge::LeftCW), &Edge::LeftCW);
-    // dbg!(get_edge(current_tile, &Edge::LeftCCW), &Edge::LeftCCW);   
 
     let all_neighbors = find_all_neighbors(&tiles);
     let answer_part_1: u64 = all_neighbors.iter().map(|(tile_id, neighbors)| {
@@ -252,5 +309,26 @@ fn main() {
 
     println!("{}", answer_part_1);
 
-    assemble_image(&tiles, &all_neighbors);
+    let original_image = assemble_image(&tiles, &all_neighbors);
+    let wave_count = original_image.iter().map(|row| {
+        row.iter().filter(|character| **character == '#').count() as u64
+    }).sum::<u64>();
+
+    let mut found = false;
+    for flip_type in 0..3 {
+        for num_rotates in 0..4 {
+            let image = flip(&rotate(&original_image, num_rotates), flip_type);
+            let sea_monsters = find_sea_monsters(image);
+
+            if sea_monsters > 0 {
+                println!("{}", wave_count - sea_monsters);
+                found = true;
+                break;
+            }
+        }
+
+        if found {
+            break;
+        }
+    }
 }
