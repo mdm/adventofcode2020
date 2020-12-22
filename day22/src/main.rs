@@ -75,7 +75,6 @@ fn main() {
         }
     }
 
-    // dbg!(&original_decks);
 
     let mut decks = original_decks.clone();
     while decks[0].len() > 0 && decks[1].len() > 0 {
@@ -107,9 +106,9 @@ fn main() {
         println!("{}", score);
     }
 
-    let mut decks = original_decks.clone();
+
+    let decks = original_decks.clone();
     let result = recursive_combat(decks);
-    // dbg!(&result);
     match result.0 {
         0 => {
             let score = result.1[0].iter().rev().zip(0..result.1[0].len()).map(|(card, multiplier)| card * (multiplier as u32 + 1)).sum::<u32>();
