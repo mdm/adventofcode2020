@@ -47,7 +47,6 @@ fn play_game_naive(mut cups: Vec<u32>, iterations: u32) -> Vec<u32> {
 #[derive(Debug)]
 struct Cup {
     label: u32,
-    previous: usize,
     next: usize,
 }
 
@@ -64,7 +63,6 @@ impl CupRing {
             lut.insert(*cup, i);
             Cup {
                 label: *cup,
-                previous: (i + cups.len() - 1) % cups.len(),
                 next: (i + 1) % cups.len(),
             }
         }).collect();
@@ -104,8 +102,6 @@ impl CupRing {
         let end = self.data[self.data[start].next].next;
 
         self.data[source].next = self.data[end].next;
-
-        self.data[start].previous = destination;
         self.data[end].next = self.data[destination].next;
         self.data[destination].next = start;
     }
