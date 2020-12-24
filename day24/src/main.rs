@@ -76,7 +76,6 @@ fn main() {
                 }
                 _ => unreachable!(),
             }
-            // dbg!(x, y);
         }
 
         if black_tiles.contains(&(x, y)) {
